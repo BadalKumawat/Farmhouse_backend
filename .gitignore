@@ -1,0 +1,16 @@
+# Virtual environment
+farm_env/
+
+# Django files
+*.pyc
+__pycache__/
+*.log
+db.sqlite3
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
