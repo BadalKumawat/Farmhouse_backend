@@ -43,11 +43,14 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     'rest_framework_simplejwt.token_blacklist',
+    "drf_spectacular",
+    'django_filters',
 
     "users",
     "properties",
     "bookings",
     "reviews",
+    "site_settings"
 ]
     
 
@@ -138,8 +141,14 @@ AUTH_USER_MODEL = 'users.CustomUser'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',   
+
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
 }
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'

@@ -27,6 +27,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 # 2. अपने 'users/apis.py' से 'MyTokenObtainPairView' को इम्पोर्ट करें
 from users.apis import MyTokenObtainPairView 
 
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     
@@ -47,4 +49,14 @@ urlpatterns = [
     
     # --- Users App URLs (यह वैसा ही है) ---
     path('api/auth/', include('users.urls')),
+
+    # Yeh 'properties/urls.py' file ko hamare project se jodta hai
+    path('api/properties/', include('properties.urls')),
+
+    # --- SWAGGER URLs ---
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Swagger UI:
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    # Redoc UI:
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

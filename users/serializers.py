@@ -44,34 +44,38 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # 'password2' ko data se hata dein
         validated_data.pop('password2')
-        
+
         # 'password' ko alag se nikal lein
         password = validated_data.pop('password')
 
-        # User create karein (CustomUserManager ka 'create_user' call hoga)
-        # Email, first_name, last_name, phone_number pass honge
+        # User create karein
         user = CustomUser.objects.create_user(password=password, **validated_data)
-        
-        # (Email verification wala logic yahaan se move ho gaya hai,
-        #  kyunki 'create_user' ab use handle kar raha hai)
-        # Hum email verification ko alag se trigger karenge
-        
-        # --- Email Bhejne ka Logic (Wahi purana) ---
+
+        # --- Email Bhejne ka Logic (UPDATED) ---
         try:
+            # --- 1. User ko verification email bhejein (Pehle jaisa) ---
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             verification_url = f"http://127.0.0.1:8000/api/auth/verify-email/{uid}/{token}/"
-            
             subject = 'Verify your email for Farmstay'
             message = f"Hi {user.first_name},\n\nPlease click the link to verify your email:\n{verification_url}"
-            
-            send_mail(
-                subject, message, settings.DEFAULT_FROM_EMAIL, [user.email],
-                fail_silently=False,
-            )
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+
+            # --- 2. Check karein ki Admin ko notification chahiye ya nahi ---
+            settings_obj = SiteSettings.objects.first()
+            if settings_obj and settings_obj.notify_new_user:
+
+                admin_subject = 'New User Registration on Farmstay'
+                admin_message = f"A new user has registered:\n\nEmail: {user.email}\nName: {user.full_name}\nRole: {user.role}"
+
+                # Admin ka email .env file se lein
+                admin_email = config('ADMIN_EMAIL', default=None)
+                if admin_email:
+                    send_mail(admin_subject, admin_message, settings.DEFAULT_FROM_EMAIL, [admin_email])
+
         except Exception as e:
             print(f"Error sending email: {e}")
-            
+
         return user
 
 
@@ -125,21 +129,41 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """
-    Serializer for displaying user profile details.
+    Serializer for displaying AND updating user profile details.
     """
     class Meta:
         model = CustomUser
-        # Yeh fields hum API response mein dikhayenge
+        # 'email' aur 'role' ko read_only rakhenge
         fields = [
-            'id',  
-            'email', 
+            'id', 
+            'email',             # Read-only
             'first_name', 
             'last_name', 
-            'phone_number',
-            'role', 
-            'status'
+            'phone_number',      
+            'role',              # Read-only
+            'status'             # Read-only
         ]
-        # Hum nahi chahte ki koi is API se data 'write' (POST/PUT) kare
-        read_only_fields = fields
+        # Yahaan sirf woh fields daalein jo user badal nahi sakta
+        read_only_fields = ['id', 'email', 'role', 'status']
+
+    def update(self, instance, validated_data):
+        # Yeh check karta hai ki user galti se email ya role ko na badal de
+        if 'email' in validated_data:
+            raise serializers.ValidationError({"email": "Email cannot be changed."})
+        if 'role' in validated_data:
+            raise serializers.ValidationError({"role": "Role cannot be changed."})
+
+        return super().update(instance, validated_data)
 
 
+class AdminUserListSerializer(serializers.ModelSerializer):
+    """
+    Admin dashboard mein Users aur Vendors ki list dikhane ke liye.
+    """
+    # Hum 'full_name' (property) ka istemal kar rahe hain
+    full_name = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = CustomUser
+        # image_545375.png ke hisab se fields
+        fields = ['id', 'full_name', 'email', 'phone_number', 'role', 'status', 'date_joined']

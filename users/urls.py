@@ -1,5 +1,6 @@
 from django.urls import path
 from .apis import *
+from properties.apis import WishlistListView 
 urlpatterns = [
     # SignUp // Registration  URL
     path('register/', UserRegistrationView.as_view(), name='register'),
@@ -29,4 +30,28 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'), 
 
     path('dashboard/', UserDashboardView.as_view(), name='dashboard'),
+
+    # --- (ADMIN URLs) ---
+    # URL: /api/auth/admin/users/
+    path('admin/users/', AdminUserListView.as_view(), name='admin-user-list'),
+    
+    # URL: /api/auth/admin/users/<id>/delete/
+    path('admin/users/<int:id>/delete/', AdminManageUserView.as_view(), name='admin-user-delete'),
+    
+    # URL: /api/auth/admin/vendors/
+    path('admin/vendors/', AdminVendorListView.as_view(), name='admin-vendor-list'),
+    
+    # URL: /api/auth/admin/vendors/<id>/approve/
+    path('admin/vendors/<int:id>/approve/', AdminApproveVendorView.as_view(), name='admin-vendor-approve'),
+    
+    # URL: /api/auth/admin/vendors/<id>/delete/
+    path('admin/vendors/<int:id>/delete/', AdminManageUserView.as_view(), name='admin-vendor-delete'), # Wahi user delete view
+
+
+
+    path('dashboard/', UserDashboardView.as_view(), name='dashboard'), # User Profile Update
+
+
+    path('dashboard/wishlist/', WishlistListView.as_view(), name='dashboard-wishlist'),
+
 ]

@@ -13,7 +13,8 @@ from django.conf import settings
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from .permissions import IsAdminRole
+from rest_framework import status
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -189,11 +190,59 @@ class LogoutView(APIView):
             )
         
 
-class UserDashboardView(generics.RetrieveAPIView):
-    # Sirf login kiye hue users hi ise access kar sakte hain
+class UserDashboardView(generics.RetrieveUpdateAPIView): # <-- RetrieveUpdateAPIView ka istemal karein
+    """
+    API view for logged-in user's dashboard (GET) and Profile Update (PUT/PATCH).
+    """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserProfileSerializer
 
     def get_object(self):
         # 'request.user' hamesha logged-in user hota hai
         return self.request.user
+    
+
+class AdminUserListView(generics.ListAPIView):
+    """
+    Admin ke liye: Saare 'guest' users ki list.
+    (image_545375.png)
+    """
+    queryset = CustomUser.objects.filter(role='guest').order_by('-date_joined')
+    serializer_class = AdminUserListSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+class AdminVendorListView(generics.ListAPIView):
+    """
+    Admin ke liye: Saare 'vendor' users ki list.
+    (image_54537d.png)
+    """
+    queryset = CustomUser.objects.filter(role='vendor').order_by('-date_joined')
+    serializer_class = AdminUserListSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+class AdminManageUserView(generics.DestroyAPIView):
+    """
+    Admin ke liye: Ek user/vendor ko delete karna.
+    (Dono ke 'Delete' button ke liye)
+    """
+    queryset = CustomUser.objects.all()
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    lookup_field = 'id' # Hum ID se delete karenge
+
+class AdminApproveVendorView(APIView):
+    """
+    Admin ke liye: Ek 'pending' vendor ko 'verified' karna.
+    (image_54537d.png ka 'Approve' button)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def patch(self, request, id, *args, **kwargs):
+        try:
+            vendor = CustomUser.objects.get(id=id, role='vendor')
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Vendor not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Vendor ko 'verified' (ya 'active') karein
+        vendor.status = 'verified' # Ya 'active' jo bhi aapka logic hai
+        vendor.save()
+        return Response({'message': 'Vendor approved successfully.'}, status=status.HTTP_200_OK)

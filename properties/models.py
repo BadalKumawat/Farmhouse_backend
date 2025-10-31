@@ -1,6 +1,18 @@
 from django.db import models
 from django.conf import settings # We'll use this to get your CustomUser model
+from django.utils.text import slugify
+import uuid
 
+
+class Category(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Categories"
+
+    def __str__(self):
+        return self.name
+    
 # Model 1: AMENITY
 # These are the checkbox items like 'Wi-Fi', 'Pool', etc.
 class Amenity(models.Model):
@@ -32,8 +44,38 @@ class Property(models.Model):
         related_name='properties',
         limit_choices_to={'role': 'vendor'} # Ensures only vendors can be owners
     )
+
+
     title = models.CharField(max_length=255, verbose_name="Property Name")
+
+
+    # random generate krega jo ki property ki id ki jagah use hoga 
+    slug = models.SlugField(
+        max_length=255, 
+        unique=True, 
+        default=uuid.uuid4, 
+        editable=False
+    )
+
     property_type = models.CharField(max_length=50, choices=PropertyType.choices)
+
+    category = models.ForeignKey(
+        Category, 
+        on_delete=models.SET_NULL, # Agar category delete ho, to property delete na ho
+        null=True,
+        blank=True,
+        related_name='properties'
+    )
+
+    class PropertyStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
+    status = models.CharField(
+        max_length=50,
+        choices=PropertyStatus.choices,
+    )
     
     # --- Location ---
     state = models.CharField(max_length=100)
@@ -86,6 +128,7 @@ class Property(models.Model):
 
     def __str__(self):
         return self.title
+    
 
 # Model 3: PROPERTY IMAGE
 # Allows for multiple images per property
