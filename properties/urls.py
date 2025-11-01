@@ -19,12 +19,22 @@ urlpatterns = [
     # URL: /api/properties/amenities/
     path('amenities/', AmenityListView.as_view(), name='amenity-list'),
 
-    # --- (NEW DESTINATION URL) ---
-    # URL: /api/properties/destinations/
-    # path('destinations/', DestinationListView.as_view(), name='destination-list'),
+    # GET /api/properties/destinations/
+    path('destinations/', DestinationListView.as_view(), name='destination-list'),
+
+    path('certifications/', CertificationListView.as_view(), name='certification-list'),
+
+    path('view-types/', ViewTypeListView.as_view(), name='view-type-list'),
+
+    # URL: /api/properties/areas/
+    path('areas/', AreaListView.as_view(), name='area-list'),
     
+    # URL: /api/properties/property-types/
+    path('property-types/', PropertyTypeListView.as_view(), name='property-type-list'),
+
+
+
     # --- Dynamic URLs (Slugs) ab neeche hain ---
-    
     # GET /api/properties/my-new-property/ (Public)
     path('<slug:slug>/', PropertyDetailView.as_view(), name='property-detail'),
     

@@ -1,6 +1,5 @@
 from django.urls import path
 from .apis import *
-from properties.apis import WishlistListView 
 urlpatterns = [
     # SignUp // Registration  URL
     path('register/', UserRegistrationView.as_view(), name='register'),
@@ -30,6 +29,10 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'), 
 
     path('dashboard/', UserDashboardView.as_view(), name='dashboard'),
+    path('dashboard/wishlist/', WishlistListView.as_view(), name='dashboard-wishlist'),
+
+    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+
 
     # --- (ADMIN URLs) ---
     # URL: /api/auth/admin/users/
@@ -48,10 +51,5 @@ urlpatterns = [
     path('admin/vendors/<int:id>/delete/', AdminManageUserView.as_view(), name='admin-vendor-delete'), # Wahi user delete view
 
 
-
-    path('dashboard/', UserDashboardView.as_view(), name='dashboard'), # User Profile Update
-
-
-    path('dashboard/wishlist/', WishlistListView.as_view(), name='dashboard-wishlist'),
-
+    
 ]

@@ -8,6 +8,9 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from site_settings.models import SiteSettings
+from decouple import config
+
 # -------------------------------------
 
 
@@ -61,7 +64,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             message = f"Hi {user.first_name},\n\nPlease click the link to verify your email:\n{verification_url}"
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
 
-            # --- 2. Check karein ki Admin ko notification chahiye ya nahi ---
+            # --- For Admin Notificatio of updation ---
             settings_obj = SiteSettings.objects.first()
             if settings_obj and settings_obj.notify_new_user:
 
@@ -84,16 +87,17 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
         # Token (payload) mein 'email' aur 'role' daalein (username ki jagah)
         token['email'] = user.email
         token['role'] = user.role
-
         return token
 
     def validate(self, attrs):
         # Default 'validate' method ko call karein (jo tokens generate karega)
         data = super().validate(attrs)
+        profile_pic_url = None
+        if self.user.profile_picture:
+            profile_pic_url = self.user.profile_picture.url
 
         # 'data' (jo response hai) usmein user details add karein
         # (username hatakar phone_number add kiya hai)
@@ -105,7 +109,11 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'phone_number': self.user.phone_number, # Naya field
             'role': self.user.role,
             'status': self.user.status,
+            'profile_picture': profile_pic_url,
         }
+        if not self.user.is_active:
+             raise serializers.ValidationError('Account is inactive. Please verify your email.')
+
         return data
     
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -125,6 +133,28 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if data['password'] != data['password2']:
             raise serializers.ValidationError("Passwords do not match.")
         return data
+    
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    new_password2 = serializers.CharField(write_only=True, required=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is not correct.")
+        return value
+
+    def validate(self, data):
+        if data['new_password'] != data['new_password2']:
+            raise serializers.ValidationError("New passwords do not match.")
+        return data
+
+    def save(self, **kwargs):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -141,10 +171,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'last_name', 
             'phone_number',      
             'role',              # Read-only
-            'status'             # Read-only
+            'status',             # Read-only
+            'profile_picture',
+            # Vendor notification fields
+            'notify_new_bookings', 
+            'notify_guest_messages', 
+            'notify_cancellations'
         ]
         # Yahaan sirf woh fields daalein jo user badal nahi sakta
-        read_only_fields = ['id', 'email', 'role', 'status']
+        # read_only_fields = ['id', 'email', 'role', 'status']
 
     def update(self, instance, validated_data):
         # Yeh check karta hai ki user galti se email ya role ko na badal de

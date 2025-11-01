@@ -4,6 +4,26 @@ from django.utils.text import slugify
 import uuid
 
 
+#     Model 1: ViewType ---
+class ViewType(models.Model):
+    """
+    Model for property views like 'Beach View', 'Mountain View'
+    """
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+#     Model 2: Certification    ----
+class Certification(models.Model):
+    """
+    Model for certifications like 'Sustainability certification'
+    """
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+    
+#      MOdel 3: Category  
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
@@ -13,7 +33,7 @@ class Category(models.Model):
     def __str__(self):
         return self.name
     
-# Model 1: AMENITY
+# Model 4: AMENITY
 # These are the checkbox items like 'Wi-Fi', 'Pool', etc.
 class Amenity(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -25,7 +45,7 @@ class Amenity(models.Model):
     def __str__(self):
         return self.name
 
-# Model 2: PROPERTY
+# Model 5: PROPERTY
 # This is the main model for the farmhouse, villa, etc.
 class Property(models.Model):
 
@@ -108,6 +128,23 @@ class Property(models.Model):
         null=True
     )
 
+    cleaning_fee = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        default=0
+    )
+
+    service_fee_percent = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        default=5.0, # Maan lijiye default 5% service fee hai
+        verbose_name="Service Fee (%)"
+    )
+
     # --- Availability ---
     check_in_time = models.TimeField()
     check_out_time = models.TimeField()
@@ -122,6 +159,10 @@ class Property(models.Model):
     # This will create the checkbox list you wanted
     amenities = models.ManyToManyField(Amenity, blank=True)
 
+    # --- Certifications Field ---
+    certifications = models.ManyToManyField(Certification, blank=True)
+    views = models.ManyToManyField(ViewType, blank=True, related_name='properties')
+
     # --- Timestamps ---
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -130,7 +171,7 @@ class Property(models.Model):
         return self.title
     
 
-# Model 3: PROPERTY IMAGE
+# Model 6: PROPERTY IMAGE
 # Allows for multiple images per property
 class PropertyImage(models.Model):
     # Link to the Property model
@@ -145,7 +186,7 @@ class PropertyImage(models.Model):
     def __str__(self):
         return f"Image for {self.property.title}"
 
-# Model 4: BLACKOUT DATE
+# Model 7: BLACKOUT DATE
 # Dates when the property is not available
 class BlackoutDate(models.Model):
     # Link to the Property model

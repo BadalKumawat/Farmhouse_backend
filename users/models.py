@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.conf import settings # AUTH_USER_MODEL ke liye
 from properties.models import Property # Wishlist ke liye
+import uuid
 
 class CustomUserManager(BaseUserManager):
     
@@ -44,7 +45,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         ACTIVE = 'active', 'Active'
         VERIFIED = 'verified', 'Verified'
 
-    # --- Aapke naye Fields ---
     
     # 1. Email ( yeh Login Field )
     email = models.EmailField(unique=True) 
@@ -74,6 +74,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         blank=True, # Wishlist khaali ho sakti hai
         related_name="wishlisted_by"
     )
+
+    #profile picture field
+    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+
+    # (Yeh fields sirf Vendor role ke liye relevant hain)
+    notify_new_bookings = models.BooleanField(default=True)
+    notify_guest_messages = models.BooleanField(default=True)
+    notify_cancellations = models.BooleanField(default=False)
 
     # --- Django ke zaroori fields ---
     is_staff = models.BooleanField(default=False)

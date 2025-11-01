@@ -1,5 +1,6 @@
 import django_filters
-from .models import Property, Amenity
+from .models import *
+from django.db.models import Avg
 
 class PropertyFilter(django_filters.FilterSet):
     """
@@ -26,6 +27,14 @@ class PropertyFilter(django_filters.FilterSet):
     # ?max_price=10000
     max_price = django_filters.NumberFilter(field_name='base_price', lookup_expr='lte')
 
+    # --- YEH NAYA FILTER ADD KAREIN (Neighbourhood) ---
+    # ?area=vaishali
+    area = django_filters.CharFilter(field_name='area', lookup_expr='icontains')
+
+    # --- YEH NAYA FILTER ADD KAREIN (Rating) ---
+    # ?min_rating=4
+    min_rating = django_filters.NumberFilter(field_name="average_rating", lookup_expr='gte')
+
     # 6. 'amenities' (सुविधाएँ) के लिए फ़िल्टर
     # ?amenities=1&amenities=3 (Wi-Fi aur Pool dono chahiye)
     amenities = django_filters.ModelMultipleChoiceFilter(
@@ -35,7 +44,21 @@ class PropertyFilter(django_filters.FilterSet):
         conjoined=True, # 'conjoined=True' ka matlab 'AND' hai (sari amenities honi chahiye)
     )
 
+    certifications = django_filters.ModelMultipleChoiceFilter(
+        field_name='certifications__name',
+        to_field_name='name',
+        queryset=Certification.objects.all(),
+        conjoined=True,
+    )
+
+    views = django_filters.ModelMultipleChoiceFilter(
+        field_name='views__name',
+        to_field_name='name',
+        queryset=ViewType.objects.all(),
+        conjoined=True,
+    )
+
     class Meta:
         model = Property
         # 'fields' list batati hai ki filterset ko kin fields par kaam karna hai
-        fields = ['city', 'property_type', 'guests', 'min_price', 'max_price', 'amenities']
+        fields = ['city', 'property_type', 'guests', 'min_price', 'max_price', 'amenities','area', 'min_rating', 'certifications', 'views']

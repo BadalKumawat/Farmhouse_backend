@@ -7,8 +7,10 @@ class PropertyAdmin(admin.ModelAdmin):
     list_filter = ('property_type', 'city', 'state')
     search_fields = ('title', 'owner__username')
 
+admin.site.register(Certification)
+admin.site.register(ViewType)
 admin.site.register(Category)
-admin.site.register(Property, PropertyAdmin) # Property को नए क्लास के साथ
+admin.site.register(Property, PropertyAdmin)
 admin.site.register(Amenity)
 admin.site.register(PropertyImage)
 admin.site.register(BlackoutDate)

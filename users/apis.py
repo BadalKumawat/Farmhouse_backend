@@ -15,6 +15,8 @@ from django.utils.encoding import force_bytes, force_str
 from rest_framework_simplejwt.tokens import RefreshToken
 from .permissions import IsAdminRole
 from rest_framework import status
+from properties.models import Property
+from properties.serializers import PropertyListSerializer
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -246,3 +248,42 @@ class AdminApproveVendorView(APIView):
         vendor.status = 'verified' # Ya 'active' jo bhi aapka logic hai
         vendor.save()
         return Response({'message': 'Vendor approved successfully.'}, status=status.HTTP_200_OK)
+    
+
+class ChangePasswordView(generics.UpdateAPIView):
+    """
+    API view for a logged-in user to change their password.
+    """
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
+    
+
+class WishlistListView(generics.ListAPIView):
+    """
+    API to list all properties in the logged-in user's wishlist.
+    (Used for /dashboard/wishlist route)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PropertyListSerializer
+    
+    def get_queryset(self):
+        # Logged-in user ki 'wishlist' field se properties nikalna
+        user = self.request.user
+        return user.wishlist.all().order_by('-created_at')
+
+    def get_serializer_context(self):
+        # Wishlist serializer ko 'request' object pass karna zaroori hai
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return contex

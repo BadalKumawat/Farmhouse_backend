@@ -10,7 +10,17 @@ from users.models import CustomUser
 
 
 
-# --- Pehle, chote helper serializers ---
+# --- helper serializers ---
+
+class SimpleViewTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ViewType
+        fields = ['id', 'name']
+
+class SimpleCertificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Certification
+        fields = ['id', 'name']
 
 class SimpleCategorySerializer(serializers.ModelSerializer):
     """
@@ -70,6 +80,10 @@ class PropertyListSerializer(serializers.ModelSerializer):
     # 5. 'Wishlist' (Heart) Icon
     is_in_wishlist = serializers.SerializerMethodField()
 
+    views = SimpleViewTypeSerializer(many=True, read_only=True)
+    
+    certifications = SimpleCertificationSerializer(many=True, read_only=True)
+
     class Meta:
         model = Property
         # Yeh fields hum 'card' par dikhayenge
@@ -82,6 +96,10 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'main_image',       # Calculated
             'average_rating',   # Calculated
             'is_guest_favourite', # Calculated
+            'bedrooms',
+            'max_guests',
+            'views',
+            'certifications',
             'is_new',           # Calculated
             'is_in_wishlist',   # Calculated
             'slug'
@@ -143,6 +161,9 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     # ('AmenitySerializer' ka istemal kar rahe hain)
     amenities = AmenitySerializer(many=True, read_only=True)
     
+    # 4. To show all the view option 
+    views = SimpleViewTypeSerializer(many=True, read_only=True)
+    
     
     # --- Calculated Fields (Jo model mein nahi hain) ---
     
@@ -163,6 +184,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'state', 'city', 'area', 'pin_code', 'google_maps_location',
             'short_description', 'full_description',
             'base_price', 'weekend_price', 'extra_guest_charge',
+            'cleaning_fee', 'service_fee_percent',
             'check_in_time', 'check_out_time',
             'bedrooms', 'bathrooms', 'max_guests',
             'created_at',
@@ -170,6 +192,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             # --- Nested aur Calculated fields ---
             'images',           # Nested
             'amenities',        # Nested
+            'certifications',
+            'views',
             'average_rating',   # Calculated
             'total_reviews',    # Calculated
             'is_in_wishlist',   # Calculated
@@ -216,6 +240,18 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     """
     
     # --- Nested Fields (Data lene ke liye) ---
+
+    views = serializers.PrimaryKeyRelatedField(
+        queryset=ViewType.objects.all(),
+        many=True,
+        required=False
+    )
+
+    certifications = serializers.PrimaryKeyRelatedField(
+        queryset=Certification.objects.all(),
+        many=True,
+        required=False
+    )
     
     # 1. Amenities (List of IDs)
     # Frontend se [1, 5, 8] jaisi IDs ki list lega
@@ -241,15 +277,18 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             'state', 'city', 'area', 'pin_code', 'google_maps_location',
             'short_description', 'full_description',
             'base_price', 'weekend_price', 'extra_guest_charge',
+            'cleaning_fee', 'service_fee_percent',
             'check_in_time', 'check_out_time',
             'bedrooms', 'bathrooms', 'max_guests',
             
             # --- Nested Fields ---
             'amenities', # IDs ki list
+            'certifications',
+            'views',
             'images',     # Files ki list
             'slug'
         ]
-        # 'owner' yahaan nahi hai, kyunki use hum View se set karenge
+        
 
     def create(self, validated_data):
         """
@@ -261,13 +300,25 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         # 2. 'amenities' data ko bhi nikal lein
         amenities_data = validated_data.pop('amenities', [])
 
-        # 3. Pehle Property create karein (bina images ke)
+        # 3.
+        certifications_data = validated_data.pop('certifications', [])
+
+        # 4.
+        views_data = validated_data.pop('views', [])
+
+        # 6. 
         property_obj = Property.objects.create(**validated_data)
         
-        # 4. Amenities ko property se link karein
+        # 7. Amenities ko property se link karein
         property_obj.amenities.set(amenities_data)
 
-        # 5. Ab har image ke liye 'PropertyImage' object banayein
+        # 8.
+        property_obj.certifications.set(certifications_data)
+
+        # 9.
+        property_obj.views.set(views_data)
+
+        # 10. Ab har image ke liye 'PropertyImage' object banayein
         for image_data in images_data:
             PropertyImage.objects.create(property=property_obj, image=image_data)
             
@@ -279,6 +330,17 @@ class PropertyUpdateSerializer(serializers.ModelSerializer):
     Serializer for updating (editing) an existing property.
     Images are not required here.
     """
+
+    certifications = serializers.PrimaryKeyRelatedField(
+        queryset=Certification.objects.all(),
+        many=True,
+        required=False
+    )
+    views = serializers.PrimaryKeyRelatedField(
+        queryset=ViewType.objects.all(),
+        many=True,
+        required=False
+    )
     
     amenities = serializers.PrimaryKeyRelatedField(
         queryset=Amenity.objects.all(),
@@ -300,9 +362,12 @@ class PropertyUpdateSerializer(serializers.ModelSerializer):
             'state', 'city', 'area', 'pin_code', 'google_maps_location',
             'short_description', 'full_description',
             'base_price', 'weekend_price', 'extra_guest_charge',
+            'cleaning_fee', 'service_fee_percent',
             'check_in_time', 'check_out_time',
             'bedrooms', 'bathrooms', 'max_guests',
             'amenities',
+            'certifications',
+            'views',
             'images'
         ]
 
@@ -326,7 +391,18 @@ class PropertyUpdateSerializer(serializers.ModelSerializer):
             amenities_data = validated_data.pop('amenities')
             instance.amenities.set(amenities_data)
 
-        # 3. Baaki fields ko default tareeke se update karein
+        # 3.
+        if 'certifications' in validated_data: # <-- ADD THIS BLOCK
+            certifications_data = validated_data.pop('certifications')
+            instance.certifications.set(certifications_data)
+
+        # 4.
+        if 'views' in validated_data: # <-- YEH NAYA BLOCK ADD KAREIN
+            views_data = validated_data.pop('views')
+            instance.views.set(views_data)
+
+
+        # 5. Baaki fields ko default tareeke se update karein
         return super().update(instance, validated_data)
     
 
@@ -351,6 +427,8 @@ class AdminPropertyListSerializer(serializers.ModelSerializer):
             'title', 
             'category', # Category ka naam
             'base_price', 
+            'cleaning_fee',
+            'service_fee_percent',
             'status',   # 'pending', 'approved'
             'owner'     # Owner ka naam
         ]

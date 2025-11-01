@@ -1,37 +1,56 @@
 #api views file 
-from rest_framework import generics, permissions
-from .models import Property
+from rest_framework import generics, permissions, filters
+from .models import *
 from .serializers import *
 from .permission import IsVendor, IsOwner
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Property
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import PropertyFilter
-from users.permissions import IsAdminRole # 'users' app se IsAdminRole ko import karein
+from users.permissions import IsAdminRole # importing isAdmin role for property accept/reject feature from "users"
+from django.db.models import Count, Avg, Q
+from drf_spectacular.utils import extend_schema, OpenApiTypes, OpenApiResponse
+from rest_framework import serializers
+
+
+class DestinationResponseSerializer(serializers.Serializer):
+    city = serializers.CharField()
+    state = serializers.CharField()
+    count = serializers.IntegerField()
+
+class PropertyTypeResponseSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    label = serializers.CharField()
+
 # --- (MAIN) View 1: Property List View (Sari properties dikhane ke liye) ---
 
 class PropertyListView(generics.ListAPIView):
     """
     API view to list all *APPROVED* properties.
+    filtering (city, price, area...) aur Sorting (price, rating) ko support karta hai.
     """
-
-    # yeh sirf 'approved' properties hi dikhayega
-    queryset = Property.objects.filter(status=Property.PropertyStatus.APPROVED)
-    # -------------------
-
     serializer_class = PropertyListSerializer
     permission_classes = [permissions.AllowAny]
-
-    filter_backends = [DjangoFilterBackend]
+    
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter] # (FIX 3) OrderingFilter add karein
     filterset_class = PropertyFilter
+    
+    ordering_fields = ['base_price', 'average_rating', 'created_at'] 
+    # --------------------------
+
+    def get_queryset(self):
+        """
+        Queryset for approved property
+        """
+        # (FIX 5)
+        return Property.objects.filter(
+            status=Property.PropertyStatus.APPROVED
+        ).annotate(
+            average_rating=Avg('reviews__rating', filter=Q(reviews__isnull=False), default=0.0)
+        )
 
     def get_serializer_context(self):
-        """
-        Serializer ko 'request' object pass karta hai.
-        (Taki 'is_in_wishlist' field user ko check kar sake)
-        """
         context = super().get_serializer_context()
         context.update({'request': self.request})
         return context
@@ -132,7 +151,7 @@ class ToggleWishlistView(APIView):
         return Response({'message': message}, status=status.HTTP_200_OK)
 
     
-class WishlistListView(generics.ListAPIView):
+''' class WishlistListView(generics.ListAPIView):
     """
     API to list all properties in the logged-in user's wishlist.
     (Used for /dashboard/wishlist route)
@@ -149,7 +168,7 @@ class WishlistListView(generics.ListAPIView):
         # Wishlist serializer ko 'request' object pass karna zaroori hai
         context = super().get_serializer_context()
         context.update({'request': self.request})
-        return context
+        return context '''
     
 
 class VendorPropertyListView(generics.ListAPIView):
@@ -255,22 +274,80 @@ class AmenityListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
 
-''' class DestinationListView(APIView):
+class DestinationListView(APIView):
     """
-    API to list all unique cities/destinations where APPROVED properties are available.
-    (Used for /destinations route and search dropdowns)
+    API to list all unique cities/destinations where APPROVED properties are available
+    along with the total count of properties in that city.
     """
     permission_classes = [permissions.AllowAny]
     
+#    @extend_schema(responses=DestinationResponseSerializer(many=True))
     def get(self, request, format=None):
-        # Database se saare unique 'city' values nikalna
-        cities = (
+        # 1. Sirf 'APPROVED' properties ko filter karein
+        # 2. 'city' field ke hisab se group karein
+        # 3. Har group ka count nikalen (annotation)
+        cities_with_count = (
             Property.objects
-            .filter(status=Property.PropertyStatus.APPROVED) # Sirf approved cities
-            .values_list('city', flat=True) # Sirf city ka naam nikalna
-            .distinct() # Duplicates hatana
-            .order_by('city')
+            .filter(status=Property.PropertyStatus.APPROVED)
+            .values('city', 'state') # State bhi zaroori hai
+            .annotate(count=Count('city')) # Count nikalna
+            .order_by('-count') # Sabse zyada properties wale city ko pehle dikhayen
         )
         
-        # Inhe JSON format mein return karna
-        return Response(list(cities)) '''
+        # Output: JSON format mein list of objects return karein
+        # [{'city': 'Lonavala', 'state': 'Maharashtra', 'count': 108}, ...]
+        return Response(cities_with_count)
+    
+
+class AreaListView(APIView):
+    """
+    API to list all unique Areas (Neighbourhoods) where APPROVED properties are available.
+    (Used for /search filter dropdown)
+    """
+    permission_classes = [permissions.AllowAny]
+
+#    @extend_schema(responses=OpenApiResponse(response=[OpenApiTypes.STR]))
+    def get(self, request, format=None):
+        # Database se saare unique 'area' values nikalna
+        areas = (
+            Property.objects
+            .filter(status=Property.PropertyStatus.APPROVED)
+            .values_list('area', flat=True) # Sirf area ka naam nikalna
+            .distinct()
+            .order_by('area')
+        )
+        return Response(list(areas))
+
+class PropertyTypeListView(APIView):
+    """
+    API to list all unique Property Types available.
+    (Used for /search filter dropdown)
+    """
+    permission_classes = [permissions.AllowAny]
+
+#    @extend_schema(responses=PropertyTypeResponseSerializer(many=True))
+    def get(self, request, format=None):
+        # Property model se 'PropertyType' choices ko nikalna
+        types = Property.PropertyType.choices
+        # Output: [{'value': 'farmhouse', 'label': 'Farmhouse'}, ...]
+        type_list = [{'value': value, 'label': label} for value, label in types]
+        return Response(type_list)
+    
+
+class CertificationListView(generics.ListAPIView):
+    """
+    API to list all available certifications.
+    (Used for property forms and filters)
+    """
+    queryset = Certification.objects.all().order_by('name')
+    serializer_class = SimpleCertificationSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class ViewTypeListView(generics.ListAPIView):
+    """
+    API to list all available View Types (e.g., Beach View).
+    """
+    queryset = ViewType.objects.all().order_by('name')
+    serializer_class = SimpleViewTypeSerializer
+    permission_classes = [permissions.AllowAny]

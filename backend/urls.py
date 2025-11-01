@@ -36,7 +36,7 @@ urlpatterns = [
     # 3. यहाँ डिफ़ॉल्ट व्यू की जगह 'MyTokenObtainPairView' का इस्तेमाल करें
     path(
         'api/token/', 
-        MyTokenObtainPairView.as_view(),  # <-- यह बदल गया है
+        MyTokenObtainPairView.as_view(),
         name='token_obtain_pair'
     ),
     
