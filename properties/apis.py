@@ -33,10 +33,19 @@ class PropertyListView(generics.ListAPIView):
     serializer_class = PropertyListSerializer
     permission_classes = [permissions.AllowAny]
     
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter] # (FIX 3) OrderingFilter add karein
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter] # (FIX 3) OrderingFilter add karein
     filterset_class = PropertyFilter
     
     ordering_fields = ['base_price', 'average_rating', 'created_at'] 
+    # SearchFilter ke liye
+    search_fields = [
+        'title', 
+        'city', 
+        'state', 
+        'area', 
+        'category__name', 
+        'property_type'
+    ]
     # --------------------------
 
     def get_queryset(self):

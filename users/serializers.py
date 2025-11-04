@@ -161,6 +161,31 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for displaying AND updating user profile details.
     """
+
+    def __init__(self, *args, **kwargs):
+        # Pehle default __init__ ko run karein
+        super(UserProfileSerializer, self).__init__(*args, **kwargs)
+
+        # Check karein ki 'request' context mein hai ya nahi
+        if 'request' in self.context:
+            user = self.context['request'].user
+
+            if user and user.is_authenticated:
+                # Yeh fields define karein
+                vendor_fields = ['notify_new_bookings', 'notify_guest_messages', 'notify_cancellations']
+                guest_fields = ['notify_booking_confirmations', 'notify_promotional_offers', 'notify_account_activity']
+
+                if user.role == 'guest':
+                    # Agar user GUEST hai, toh VENDOR ki fields hata dein
+                    for field_name in vendor_fields:
+                        self.fields.pop(field_name, None)
+                        
+                elif user.role == 'vendor':
+                    # Agar user VENDOR hai, toh GUEST ki fields hata dein
+                    for field_name in guest_fields:
+                        self.fields.pop(field_name, None)
+
+
     class Meta:
         model = CustomUser
         # 'email' aur 'role' ko read_only rakhenge
@@ -176,10 +201,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
             # Vendor notification fields
             'notify_new_bookings', 
             'notify_guest_messages', 
-            'notify_cancellations'
+            'notify_cancellations',
+            # USER notification fields
+            'notify_booking_confirmations',
+            'notify_promotional_offers',
+            'notify_account_activity'
         ]
-        # Yahaan sirf woh fields daalein jo user badal nahi sakta
-        # read_only_fields = ['id', 'email', 'role', 'status']
+
+
+    extra_kwargs = {
+            'email': {'read_only': True},
+            'role': {'read_only': True},
+            'status': {'read_only': True},
+            'id': {'read_only': True},
+        }
 
     def update(self, instance, validated_data):
         # Yeh check karta hai ki user galti se email ya role ko na badal de
@@ -187,6 +222,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"email": "Email cannot be changed."})
         if 'role' in validated_data:
             raise serializers.ValidationError({"role": "Role cannot be changed."})
+        if 'profile_picture' in self.context['request'].FILES:
+            instance.profile_picture = self.context['request'].FILES['profile_picture']
 
         return super().update(instance, validated_data)
 
@@ -202,3 +239,20 @@ class AdminUserListSerializer(serializers.ModelSerializer):
         model = CustomUser
         # image_545375.png ke hisab se fields
         fields = ['id', 'full_name', 'email', 'phone_number', 'role', 'status', 'date_joined']
+
+
+class AccountDeleteSerializer(serializers.Serializer):
+    """
+    Serializer to confirm the user's current password before deletion.
+    """
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    def validate_password(self, value):
+        # Context se logged-in user object ko access karein
+        user = self.context['request'].user
+        
+        # Check karein ki diya gaya password user ke DB password se match karta hai
+        if not user.check_password(value):
+            raise serializers.ValidationError("Incorrect password. Account deletion failed.")
+        
+        return value

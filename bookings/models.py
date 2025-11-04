@@ -20,7 +20,7 @@ class Booking(models.Model):
     # Link to the user who is booking (must be a 'guest')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE,  # user delte booking delete
         related_name='bookings',
         limit_choices_to={'role': 'guest'}
     )
@@ -28,11 +28,11 @@ class Booking(models.Model):
     # Link to the property being booked
     property = models.ForeignKey(
         Property,
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE,  #propert delete booking delete
         related_name='bookings'
     )
 
-    # --- Your Requested Fields ---
+    # --- Bookinng Details ---
     check_in_date = models.DateField()
     check_out_date = models.DateField()
     guests_count = models.PositiveIntegerField(verbose_name="Number of Guests")
@@ -42,12 +42,20 @@ class Booking(models.Model):
     )
     
     # --- Price and Status ---
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(
         max_length=50,
         choices=BookingStatus.choices,
         default=BookingStatus.PENDING
     )
+
+    # --- Price Breakdown ---
+    # In fields ko hum property se copy karke save karenge
+    price_per_night = models.DecimalField(max_digits=10, decimal_places=2)
+    cleaning_fee = models.DecimalField(max_digits=8, decimal_places=2)
+    service_fee = models.DecimalField(max_digits=8, decimal_places=2)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_nights = models.PositiveIntegerField()
+    # ---------------------------------------------------
     
     # --- Timestamp ---
     booked_at = models.DateTimeField(auto_now_add=True)
@@ -57,4 +65,4 @@ class Booking(models.Model):
         unique_together = ('property', 'check_in_date', 'check_out_date')
 
     def __str__(self):
-        return f"Booking for {self.property.title} by {self.user.username}"
+        return f"Booking for {self.property.title} by {self.user.email}"

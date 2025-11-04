@@ -53,6 +53,8 @@ urlpatterns = [
     # Yeh 'properties/urls.py' file ko hamare project se jodta hai
     path('api/properties/', include('properties.urls')),
 
+    path('api/bookings/', include('bookings.urls')),
+
     # --- SWAGGER URLs ---
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Swagger UI:

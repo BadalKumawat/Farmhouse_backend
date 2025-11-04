@@ -286,4 +286,33 @@ class WishlistListView(generics.ListAPIView):
         # Wishlist serializer ko 'request' object pass karna zaroori hai
         context = super().get_serializer_context()
         context.update({'request': self.request})
-        return contex
+        return context
+
+
+class DeleteAccountView(APIView):
+    """
+    API to allow the logged-in user (Guest/Vendor/Admin) to delete their own account.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request): # DELETE ki jagah POST ka istemal karein taaki body mein data le saken
+        user = request.user
+        
+        # 1. Serializer ko run karein aur context mein user ko bhejein
+        serializer = AccountDeleteSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        # 2. Agar password sahi hai (jo serializer ne check kiya), toh deletion process shuru karein
+        
+        # 3. Tokens ko blacklist karein (Safety)
+        from rest_framework_simplejwt.tokens import RefreshToken
+        try:
+            token = RefreshToken.for_user(user)
+            token.blacklist()
+        except Exception:
+            pass # Ignore if no tokens are found
+            
+        # 4. User aur uske saare data ko delete karein (CASCADE delete)
+        user.delete()
+        
+        return Response({'message': 'Account deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)

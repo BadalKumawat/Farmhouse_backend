@@ -83,6 +83,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     notify_guest_messages = models.BooleanField(default=True)
     notify_cancellations = models.BooleanField(default=False)
 
+    notify_booking_confirmations = models.BooleanField(default=True)
+    notify_promotional_offers = models.BooleanField(default=False)
+    notify_account_activity = models.BooleanField(default=True)
+
     # --- Django ke zaroori fields ---
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False) # Verification ke liye default FALSE

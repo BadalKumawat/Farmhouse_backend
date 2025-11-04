@@ -33,6 +33,9 @@ urlpatterns = [
 
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
+    # DELETE /api/auth/delete-account/
+    path('delete-account/', DeleteAccountView.as_view(), name='delete-account'),
+
 
     # --- (ADMIN URLs) ---
     # URL: /api/auth/admin/users/

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import Booking
 
+@admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     # एडमिन लिस्ट में ये कॉलम दिखाएँ
     list_display = (
@@ -13,11 +14,9 @@ class BookingAdmin(admin.ModelAdmin):
         'total_price'
     )
     
-    # राइट साइडबार में फ़िल्टर
+    # For Filter
     list_filter = ('status', 'payment_method', 'check_in_date')
     
-    # सर्च बार (प्रॉपर्टी के टाइटल या यूज़र के नाम से)
-    search_fields = ('property__title', 'user__username')
-
-# मॉडल को रजिस्टर करें
-admin.site.register(Booking, BookingAdmin)
+    # In search bar using user email and title)
+    search_fields = ('property__title', 'user__email')
+    readonly_fields = ('booked_at', 'price_per_night', 'cleaning_fee', 'service_fee', 'total_price', 'total_nights')
