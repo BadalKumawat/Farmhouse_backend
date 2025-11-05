@@ -48,12 +48,16 @@ urlpatterns = [
     ),
     
     # --- Users App URLs (यह वैसा ही है) ---
-    path('api/auth/', include('users.urls')),
+    path('users/', include('users.urls')),
 
     # Yeh 'properties/urls.py' file ko hamare project se jodta hai
-    path('api/properties/', include('properties.urls')),
+    path('properties/', include('properties.urls')),
 
-    path('api/bookings/', include('bookings.urls')),
+    path('bookings/', include('bookings.urls')),
+
+    path('reviews/', include('reviews.urls')),
+
+    path('payments/', include('payments.urls')),
 
     # --- SWAGGER URLs ---
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

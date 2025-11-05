@@ -3,6 +3,7 @@ from .models import Booking
 from properties.models import Property
 from properties.serializers import PropertyListSerializer
 from users.serializers import UserProfileSerializer
+from payments.models import Payment
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     ''' 
@@ -76,8 +77,15 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         validated_data.pop('property_slug',None)
 
         user = self.context['request'].user   #taking usr from request
-
         booking = Booking.objects.create(user=user, **validated_data)
+
+        # Jaise hi booking bani, ek 'Pending' payment banayein
+        Payment.objects.create(
+            booking=booking,
+            amount=booking.total_price,
+            payment_method=booking.payment_method,
+            status=Payment.PaymentStatus.PENDING # Default 'Pending'
+        )
 
         # notification logic for admin and vendor
 
@@ -155,3 +163,44 @@ class AdminBookingListSerializer(BookingListSerializer):
             'id', 'property', 'user', 'check_in_date', 'check_out_date', 
             'status', 'total_price'
         ]
+
+
+class VendorBookingUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Vendor to update booking status.
+    (Vendor sirf 'confirm' ya 'cancel' kar sakta hai)
+    """
+    class Meta:
+        model = Booking
+        fields = ['status']
+        extra_kwargs = {
+            'status': {'choices': [
+                Booking.BookingStatus.CONFIRMED, 
+                Booking.BookingStatus.CANCELLED
+            ]}
+        }
+
+class AdminBookingUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Admin to update booking status.
+    (Admin koi bhi status set kar sakta hai)
+    """
+    class Meta:
+        model = Booking
+        fields = ['status']
+        # Admin ke paas saare options hain
+        extra_kwargs = {
+            'status': {'choices': Booking.BookingStatus.choices}
+        }
+
+
+class BookingReportSerializer(serializers.Serializer):
+    '''
+    Serializer for generating Booking Report
+    '''
+    total_bookings_in_range = serializers.IntegerField()
+
+    booking_over_time=serializers.ListField(
+        child=serializers.DictField(),
+        required=False
+    )

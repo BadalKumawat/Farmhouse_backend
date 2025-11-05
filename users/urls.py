@@ -33,26 +33,27 @@ urlpatterns = [
 
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
-    # DELETE /api/auth/delete-account/
+    # DELETE /users/delete-account/
     path('delete-account/', DeleteAccountView.as_view(), name='delete-account'),
 
 
     # --- (ADMIN URLs) ---
-    # URL: /api/auth/admin/users/
+    # URL: /users/admin/users/
     path('admin/users/', AdminUserListView.as_view(), name='admin-user-list'),
     
-    # URL: /api/auth/admin/users/<id>/delete/
-    path('admin/users/<int:id>/delete/', AdminManageUserView.as_view(), name='admin-user-delete'),
+    # URL: /users/admin/users/<id>/delete/
+    path('admin/users/<uuid:id>/delete/', AdminManageUserView.as_view(), name='admin-user-delete'),
     
-    # URL: /api/auth/admin/vendors/
+    # URL: /users/admin/vendors/
     path('admin/vendors/', AdminVendorListView.as_view(), name='admin-vendor-list'),
     
-    # URL: /api/auth/admin/vendors/<id>/approve/
-    path('admin/vendors/<int:id>/approve/', AdminApproveVendorView.as_view(), name='admin-vendor-approve'),
+    # URL: /users/admin/vendors/<id>/approve/
+    path('admin/vendors/<uuid:id>/approve/', AdminApproveVendorView.as_view(), name='admin-vendor-approve'),
     
-    # URL: /api/auth/admin/vendors/<id>/delete/
-    path('admin/vendors/<int:id>/delete/', AdminManageUserView.as_view(), name='admin-vendor-delete'), # Wahi user delete view
-
-
+    # URL: /users/admin/vendors/<id>/delete/
+    path('admin/vendors/<uuid:id>/delete/', AdminManageUserView.as_view(), name='admin-vendor-delete'),
+    
+    # URL: /users/admin/reports/user-growth/
+    path('admin/reports/user-growth/', AdminUserGrowthReportView.as_view(), name='admin-report-user-growth'),
     
 ]

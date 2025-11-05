@@ -12,6 +12,10 @@ from users.permissions import IsAdminRole # importing isAdmin role for property 
 from django.db.models import Count, Avg, Q
 from drf_spectacular.utils import extend_schema, OpenApiTypes, OpenApiResponse
 from rest_framework import serializers
+from bookings.models import Booking
+from django.utils import timezone
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 
 class DestinationResponseSerializer(serializers.Serializer):
@@ -341,6 +345,34 @@ class PropertyTypeListView(APIView):
         # Output: [{'value': 'farmhouse', 'label': 'Farmhouse'}, ...]
         type_list = [{'value': value, 'label': label} for value, label in types]
         return Response(type_list)
+    
+
+class AdminPropertyPerformanceReportView(APIView):
+    """
+    Admin ke liye: 'Property Performance Report' generate karna.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            end_date = datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            end_date = timezone.now().date()
+        try:
+            start_date = datetime.strptime(request.query_params.get('start_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            start_date = end_date - relativedelta(days=30)
+
+        # 'Completed' bookings ke hisab se top properties
+        top_properties = Booking.objects.filter(
+            booked_at__range=[start_date, end_date],
+            status=Booking.BookingStatus.COMPLETED
+        ).values('property__title').annotate( # Property title se group karein
+            booking_count=Count('id')
+        ).order_by('-booking_count')[:10] # Top 10
+
+        serializer = PropertyPerformanceReportSerializer(top_properties, many=True)
+        return Response(serializer.data)
     
 
 class CertificationListView(generics.ListAPIView):

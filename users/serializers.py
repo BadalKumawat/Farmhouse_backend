@@ -256,3 +256,12 @@ class AccountDeleteSerializer(serializers.Serializer):
             raise serializers.ValidationError("Incorrect password. Account deletion failed.")
         
         return value
+
+
+class UserGrowthReportSerializer(serializers.Serializer):
+    '''Srializer for user growth report'''
+
+    new_user_in_range= serializers.IntegerField()
+    user_over_time = serializers.ListField(
+        child = serializers.DictField()
+    )

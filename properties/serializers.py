@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from users.serializers import UserProfileSerializer, AdminUserListSerializer
 from users.models import CustomUser
+from reviews.serializers import ReviewListSerializer
 
 
 
@@ -84,6 +85,8 @@ class PropertyListSerializer(serializers.ModelSerializer):
     
     certifications = SimpleCertificationSerializer(many=True, read_only=True)
 
+    reviews = ReviewListSerializer(many=True, read_only=True)
+
     class Meta:
         model = Property
         # Yeh fields hum 'card' par dikhayenge
@@ -95,6 +98,8 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'base_price',
             'main_image',       # Calculated
             'average_rating',   # Calculated
+            #'total_reviews',
+            'reviews',
             'is_guest_favourite', # Calculated
             'bedrooms',
             'max_guests',
@@ -106,6 +111,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
         ]
 
     # --- In Calculated Fields ke functions ---
+
 
     def get_main_image(self, obj):
         # 'obj' yahaan 'Property' model hai
@@ -128,6 +134,10 @@ class PropertyListSerializer(serializers.ModelSerializer):
         # isliye humein use dobara calculate karna hoga
         avg_rating = self.get_average_rating(obj)
         return avg_rating is not None and avg_rating >= 4.8
+    
+#    def get_total_reviews(self, obj):
+ #       # 'reviews' (related_name) ka istemal karke count nikalo
+  #      return obj.reviews.count()
 
     def get_is_new(self, obj):
         # Check karo agar property pichle 30 dino mein bani hai
@@ -164,6 +174,12 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     # 4. To show all the view option 
     views = SimpleViewTypeSerializer(many=True, read_only=True)
     
+    certifications = SimpleCertificationSerializer(many=True, read_only=True)
+
+    category = SimpleCategorySerializer(read_only=True)
+
+    # Yeh 'Review' model ke related_name='reviews' ka istemal karega
+    reviews = ReviewListSerializer(many=True, read_only=True)
     
     # --- Calculated Fields (Jo model mein nahi hain) ---
     
@@ -197,6 +213,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'average_rating',   # Calculated
             'total_reviews',    # Calculated
             'is_in_wishlist',   # Calculated
+            'reviews','category',
         ]
         
     # --- In Calculated Fields ke functions ---
@@ -418,6 +435,8 @@ class AdminPropertyListSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source='category.name', read_only=True)
     # Owner ka naam dikhane ke liye
     owner = serializers.CharField(source='owner.full_name', read_only=True)
+
+    reviews = ReviewListSerializer(many=True, read_only=True)
     
     class Meta:
         model = Property
@@ -426,9 +445,19 @@ class AdminPropertyListSerializer(serializers.ModelSerializer):
             'slug', 
             'title', 
             'category', # Category ka naam
+            'reviews',
             'base_price', 
             'cleaning_fee',
             'service_fee_percent',
             'status',   # 'pending', 'approved'
             'owner'     # Owner ka naam
         ]
+
+
+class PropertyPerformanceReportSerializer(serializers.Serializer):
+    """
+    Serializer for the 'Property Performance Report'.
+    (Top 10 properties by booking count)
+    """
+    title = serializers.CharField(source='property__title')
+    booking_count = serializers.IntegerField()

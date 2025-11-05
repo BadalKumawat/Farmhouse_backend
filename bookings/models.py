@@ -1,9 +1,13 @@
 from django.db import models
 from django.conf import settings # For CustomUser
 from properties.models import Property # To link to the Property model
+import uuid
 
 class Booking(models.Model):
 
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
     # --- Booking Status Choices ---
     class BookingStatus(models.TextChoices):
         PENDING = 'pending', 'Pending'       # Initial status

@@ -17,6 +17,11 @@ from .permissions import IsAdminRole
 from rest_framework import status
 from properties.models import Property
 from properties.serializers import PropertyListSerializer
+from django.utils import timezone
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -248,6 +253,50 @@ class AdminApproveVendorView(APIView):
         vendor.status = 'verified' # Ya 'active' jo bhi aapka logic hai
         vendor.save()
         return Response({'message': 'Vendor approved successfully.'}, status=status.HTTP_200_OK)
+    
+class AdminUserGrowthReportView(APIView):
+    """
+    Admin ke liye: 'User Growth Report' generate karna (date range ke sath).
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            end_date = datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            end_date = timezone.now().date()
+        try:
+            start_date = datetime.strptime(request.query_params.get('start_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            start_date = end_date - relativedelta(days=30)
+
+        # Base Queryset
+        users_in_range = CustomUser.objects.filter(
+            date_joined__range=[start_date, end_date]
+        )
+        
+        # Data Calculate karein
+        new_users_count = users_in_range.count()
+        
+        # Chart Data: Users Over Time
+        chart_data = users_in_range.annotate(
+            month=TruncMonth('date_joined')
+        ).values('month').annotate(
+            count=Count('id')
+        ).order_by('month')
+
+        users_over_time = [
+            {'month': item['month'].strftime('%Y-%m'), 'count': item['count']}
+            for item in chart_data
+        ]
+        
+        data = {
+            'new_user_in_range': new_users_count,
+            'user_over_time': users_over_time
+        }
+        serializer = UserGrowthReportSerializer(instance=data)
+        #serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
     
 
 class ChangePasswordView(generics.UpdateAPIView):

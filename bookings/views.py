@@ -5,8 +5,14 @@ from rest_framework.response import Response
 from .models import *
 from .serializers import *
 from users.permissions import IsAdminRole
-# from properties.permissions import IsOwner 
+from properties.permission import IsOwner 
 from django.utils import timezone
+from .permissions import IsPropertyOwnerOfBooking
+from django.utils import timezone
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 
 # --- Guest APIs ---
 
@@ -110,3 +116,83 @@ class AdminBookingListView(generics.ListAPIView):
     queryset = Booking.objects.all().order_by('-booked_at')
     serializer_class = AdminBookingListSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+
+
+class VendorManageBookingView(generics.UpdateAPIView):
+    """
+    Vendor ke liye: Apni property ki booking ko 'Confirm' ya 'Cancel' karna.
+    """
+    queryset = Booking.objects.all()
+    serializer_class = VendorBookingUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPropertyOwnerOfBooking]
+    lookup_field = 'id' # Booking ID se
+
+
+class AdminManageBookingView(generics.UpdateAPIView):
+    """
+    Admin ke liye: Kisi bhi booking ka status update karna.
+    """
+    queryset = Booking.objects.all()
+    serializer_class = AdminBookingUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    lookup_field = 'id'
+
+class AdminBookingReportView(APIView):
+    """
+    For generating booking report for admin
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            end_date = datetime.strptime(
+                request.query_params.get('end_date'), '%Y-%m-%d'
+            ).date()
+        except (ValueError, TypeError):
+            end_date = timezone.now().date()
+
+        try:
+            start_date = datetime.strptime(
+                request.query_params.get('start_date'), '%Y-%m-%d'
+            ).date()
+        except (ValueError, TypeError):
+            start_date = end_date - relativedelta(days=30)
+
+        # ✅ Convert to timezone-aware datetimes for production safety
+        start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+        end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+
+        # ✅ Filter bookings within timezone-aware range
+        bookings_in_range = Booking.objects.filter(
+            booked_at__range=[start_datetime, end_datetime]
+        )
+
+        total_bookings = bookings_in_range.count()
+
+        # ✅ Monthly aggregation (works with timezone)
+        chart_data = (
+            bookings_in_range
+            .annotate(month=TruncMonth('booked_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+            .order_by('month')
+        )
+
+        bookings_over_time = [
+            {
+                'month': item['month'].strftime('%Y-%m'),
+                'count': item['count']
+            }
+            for item in chart_data
+        ]
+
+        # ✅ Match your serializer fields
+        data = {
+            'total_booking_in_range': total_bookings,
+            'booking_over_time': bookings_over_time
+        }
+
+        serializer = BookingReportSerializer(instance=data)
+        return Response(serializer.data)

@@ -50,7 +50,8 @@ INSTALLED_APPS = [
     "properties",
     "bookings",
     "reviews",
-    "site_settings"
+    "site_settings",
+    "payments",
 ]
     
 
