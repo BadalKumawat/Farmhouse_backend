@@ -11,6 +11,11 @@ from django.utils import timezone
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django.db.models.functions import TruncMonth
+from users.models import CustomUser
+from properties.models import Property
+from dateutil.relativedelta import relativedelta
+from .serializers import AdminDashboardStatsSerializer
+
 
 # --- Guest API ---
 class MyPaymentListView(generics.ListAPIView):
@@ -120,4 +125,55 @@ class AdminRevenueReportView(APIView):
             'revenue_over_time': revenue_over_time
         }
         serializer = RevenueReportSerializer(instance=data)
+        return Response(serializer.data)
+
+
+class AdminDashboardStatsView(APIView):
+    """
+    API for the main Admin Dashboard (image_5450cb.png).
+    Provides all-time stats and revenue charts.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        # --- YEH HAI FIX ---
+        # Note: dateutil.relativedelta ko import karna zaroori hai
+        
+        # 1. All-Time Stats Cards
+        total_revenue = Payment.objects.filter(status=Payment.PaymentStatus.COMPLETED).aggregate(total=Sum('amount'))['total'] or 0
+        total_users = CustomUser.objects.count()
+        total_properties = Property.objects.filter(status=Property.PropertyStatus.APPROVED).count()
+        total_bookings = Booking.objects.count()
+        
+        # 2. Revenue Overview Chart (Last 6 Months)
+        # 6 mahine pehle ki date
+        six_months_ago = datetime.now().date() - relativedelta(months=6) 
+        
+        # Completed payments ko filter karein
+        revenue_data = Payment.objects.filter(
+            status=Payment.PaymentStatus.COMPLETED,
+            created_at__gte=six_months_ago
+        ).annotate(
+            month=TruncMonth('created_at')
+        ).values('month').annotate(
+            revenue=Sum('amount')
+        ).order_by('month')
+
+        # Data ko chart ke liye format karein
+        revenue_over_time = [
+            {'month': item['month'].strftime('%Y-%m'), 'revenue': item['revenue']}
+            for item in revenue_data
+        ]
+        
+        # 3. Serializer ko data bhejein
+        data = {
+            'total_revenue': total_revenue,
+            'total_users': total_users,
+            'total_properties': total_properties,
+            'total_bookings': total_bookings,
+            'revenue_over_time': revenue_over_time
+        }
+        
+        # Hum 'instance=' ka istemal karenge (taaki validation skip ho)
+        serializer = AdminDashboardStatsSerializer(instance=data)
         return Response(serializer.data)

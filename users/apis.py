@@ -234,7 +234,7 @@ class AdminManageUserView(generics.DestroyAPIView):
     """
     queryset = CustomUser.objects.all()
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
-    lookup_field = 'id' # Hum ID se delete karenge
+    lookup_field = 'slug' # Hum ID se delete karenge
 
 class AdminApproveVendorView(APIView):
     """
@@ -243,9 +243,9 @@ class AdminApproveVendorView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
-    def patch(self, request, id, *args, **kwargs):
+    def patch(self, request, slug, *args, **kwargs):
         try:
-            vendor = CustomUser.objects.get(id=id, role='vendor')
+            vendor = CustomUser.objects.get(slug=slug, role='vendor')
         except CustomUser.DoesNotExist:
             return Response({'error': 'Vendor not found.'}, status=status.HTTP_404_NOT_FOUND)
         

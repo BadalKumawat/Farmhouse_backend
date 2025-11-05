@@ -39,3 +39,16 @@ class RevenueReportSerializer(serializers.Serializer):
     """
     total_revenue_in_range = serializers.DecimalField(max_digits=12, decimal_places=2)
     revenue_over_time = serializers.ListField(child=serializers.DictField())
+
+class AdminDashboardStatsSerializer(serializers.Serializer):
+    """
+    Serializer for the main admin dashboard stats (image_5450cb.png).
+    """
+    total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_users = serializers.IntegerField()
+    total_properties = serializers.IntegerField()
+    total_bookings = serializers.IntegerField()
+    
+    # Chart Data (e.g., last 6 months revenue)
+    # Note: Hum is list ko yahaan define kar rahe hain, iski calculation API mein hogi
+    revenue_over_time = serializers.ListField(child=serializers.DictField())

@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.conf import settings # AUTH_USER_MODEL ke liye
 from properties.models import Property # Wishlist ke liye
-import uuid
+from django.utils.text import slugify
+import uuid , string, random
 
 class CustomUserManager(BaseUserManager):
     
@@ -29,6 +30,13 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
         
         return self.create_user(email, password, **extra_fields)
+    
+
+# Helper function for random slug
+def generate_random_slug(length=10):
+    """Generate random alphanumeric slug."""
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
 
 # ---  Custom User Model ---
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -44,6 +52,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         PENDING = 'pending', 'Pending'
         ACTIVE = 'active', 'Active'
         VERIFIED = 'verified', 'Verified'
+
+    # random unique slug field
+    slug = models.SlugField(unique=True, blank=True, null=True)
 
     
     # 1. Email ( yeh Login Field )
@@ -103,6 +114,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     # Manager ko link karein
     objects = CustomUserManager()
+
+    def save(self, *args, **kwargs):
+        # Generate random slug if not exists
+        if not self.slug:
+            random_slug = generate_random_slug()
+            while CustomUser.objects.filter(slug=random_slug).exists():
+                random_slug = generate_random_slug()
+            self.slug = random_slug
+        super().save(*args, **kwargs)
     
     @property
     def full_name(self):

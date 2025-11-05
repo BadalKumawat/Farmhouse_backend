@@ -11,8 +11,9 @@ from .permissions import IsPropertyOwnerOfBooking
 from django.utils import timezone
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
+total_revenue_in_range = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 # --- Guest APIs ---
 
@@ -160,18 +161,26 @@ class AdminBookingReportView(APIView):
         except (ValueError, TypeError):
             start_date = end_date - relativedelta(days=30)
 
-        # ✅ Convert to timezone-aware datetimes for production safety
+        # Convert to timezone-aware datetimes for production safety
         start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
         end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
 
-        # ✅ Filter bookings within timezone-aware range
+        # Filter bookings within timezone-aware range
         bookings_in_range = Booking.objects.filter(
             booked_at__range=[start_datetime, end_datetime]
         )
 
+        payments_in_range = Payment.objects.filter(
+            created_at__range=[start_date, end_date],
+            status=Payment.PaymentStatus.COMPLETED
+        )
+
         total_bookings = bookings_in_range.count()
 
-        # ✅ Monthly aggregation (works with timezone)
+        # Revenue ko Payment model se calculate karein
+        total_revenue = payments_in_range.aggregate(total=Sum('amount'))['total'] or 0
+
+        # Monthly aggregation (works with timezone)
         chart_data = (
             bookings_in_range
             .annotate(month=TruncMonth('booked_at'))
@@ -188,11 +197,12 @@ class AdminBookingReportView(APIView):
             for item in chart_data
         ]
 
-        # ✅ Match your serializer fields
         data = {
-            'total_booking_in_range': total_bookings,
-            'booking_over_time': bookings_over_time
+            'total_bookings_in_range': total_bookings,
+            'total_revenue_in_range': total_revenue, # <-- YEH VALUE AB MAUCHD HAI
+            'bookings_over_time': bookings_over_time
         }
-
+        # Hum 'instance=' ka istemal karenge
         serializer = BookingReportSerializer(instance=data)
         return Response(serializer.data)
+    

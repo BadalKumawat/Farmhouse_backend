@@ -200,6 +200,8 @@ class BookingReportSerializer(serializers.Serializer):
     '''
     total_bookings_in_range = serializers.IntegerField()
 
+    total_revenue_in_range = serializers.DecimalField(max_digits=12, decimal_places=2)
+
     booking_over_time=serializers.ListField(
         child=serializers.DictField(),
         required=False

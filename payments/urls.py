@@ -16,6 +16,8 @@ urlpatterns = [
     path('admin/all/', views.AdminPaymentListView.as_view(), name='admin-payment-list'),
 
     # GET /payments/admin/reports/revenue-report/
-    path('admin/reports/revenue-report/', views.AdminRevenueReportView.as_view(), name='admin-report-revenue')
+    path('admin/reports/revenue-report/', views.AdminRevenueReportView.as_view(), name='admin-report-revenue'),
+
+    path('admin-dashboard-stats/', views.AdminDashboardStatsView.as_view(), name='admin-dashboard-stats'),
 
 ]

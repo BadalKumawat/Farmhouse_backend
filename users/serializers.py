@@ -102,7 +102,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # 'data' (jo response hai) usmein user details add karein
         # (username hatakar phone_number add kiya hai)
         data['user'] = {
-            'id': self.user.id,
+            'slug': self.user.slug,
             'email': self.user.email,
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
@@ -190,7 +190,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = CustomUser
         # 'email' aur 'role' ko read_only rakhenge
         fields = [
-            'id', 
+            'slug', 
             'email',             # Read-only
             'first_name', 
             'last_name', 
@@ -210,10 +210,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
     extra_kwargs = {
+            'slug': {'read_only': True},
             'email': {'read_only': True},
             'role': {'read_only': True},
             'status': {'read_only': True},
-            'id': {'read_only': True},
+            
         }
 
     def update(self, instance, validated_data):
@@ -238,7 +239,7 @@ class AdminUserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         # image_545375.png ke hisab se fields
-        fields = ['id', 'full_name', 'email', 'phone_number', 'role', 'status', 'date_joined']
+        fields = ['slug', 'full_name', 'email', 'phone_number', 'role', 'status', 'date_joined']
 
 
 class AccountDeleteSerializer(serializers.Serializer):
