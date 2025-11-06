@@ -12,6 +12,10 @@ urlpatterns = [
     # DELETE /reviews/admin/1/delete/
     path('admin/<uuid:id>/delete/', views.AdminManageReviewView.as_view(), name='admin-review-delete'),
 
+    path('video-testimonials/', views.VideoTestimonialListView.as_view(), name='video-testimonials-list'),
+    
+    path('property/<slug:slug>/upload-video/', views.VideoTestimonialCreateView.as_view(), name='video-testimonial-create'),
+
     # --- Property Specific APIs ---
     # GET /reviews/property/<slug>/
     path('property/<slug:slug>/', views.PropertyReviewListView.as_view(), name='review-list-property'),

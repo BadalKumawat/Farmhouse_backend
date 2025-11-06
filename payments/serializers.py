@@ -4,6 +4,20 @@ from rest_framework import serializers
 from .models import Payment
 from users.serializers import UserProfileSerializer
 
+
+'''class RazorpayOrderSerializer(serializers.Serializer):
+    booking_id = serializers.UUIDField()
+    order_id = serializers.CharField(read_only=True)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    key_id = serializers.CharField(read_only=True)
+
+# --- Payment Verification Serializer ---
+class RazorpayVerifySerializer(serializers.Serializer):
+    razorpay_order_id = serializers.CharField(required=True)
+    razorpay_payment_id = serializers.CharField(required=True)
+    razorpay_signature = serializers.CharField(required=True)
+    '''
+
 class MyPaymentListSerializer(serializers.ModelSerializer):
     """
     Serializer for Guest's payment history (/dashboard/payments)
@@ -13,7 +27,7 @@ class MyPaymentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ['id', 'transaction_id', 'property_title', 'amount', 'status', 'created_at']
+        fields = ['id', 'transaction_id', 'property_title', 'amount', 'status', 'created_at']#, 'booking_status', 'razorpay_order_id']
 
 class AdminPaymentListSerializer(MyPaymentListSerializer):
     """

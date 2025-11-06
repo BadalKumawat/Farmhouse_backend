@@ -19,12 +19,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-
-# 1. simplejwt के डिफ़ॉल्ट व्यू की जगह,
-#    सिर्फ 'TokenRefreshView' को इम्पोर्ट करें
 from rest_framework_simplejwt.views import TokenRefreshView
-
-# 2. अपने 'users/apis.py' से 'MyTokenObtainPairView' को इम्पोर्ट करें
 from users.apis import MyTokenObtainPairView 
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView

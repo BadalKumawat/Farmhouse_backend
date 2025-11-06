@@ -47,7 +47,7 @@ class CustomUserChangeForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         # 'Edit user' form mein yeh fields dikhengi
-        fields = ('email', 'first_name', 'last_name', 'phone_number', 'role', 'status', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+        fields = ('email', 'first_name', 'last_name','state','city', 'phone_number', 'role', 'status', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
 
     # --- YEH FIX HAI ---
     # Humne poora '__init__' method yahaan se HATA diya hai,

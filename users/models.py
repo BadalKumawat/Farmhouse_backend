@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.conf import settings # AUTH_USER_MODEL ke liye
-from properties.models import Property # Wishlist ke liye
+#from properties.models import Property # Wishlist ke liye
 from django.utils.text import slugify
 import uuid , string, random
 
@@ -57,17 +57,20 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     slug = models.SlugField(unique=True, blank=True, null=True)
 
     
-    # 1. Email ( yeh Login Field )
+    # . Email ( yeh Login Field )
     email = models.EmailField(unique=True) 
     
-    # 2. Full Name (hum ise first/last name mein store karenge)
+    # . Full Name (hum ise first/last name mein store karenge)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     
-    # 3. Mobile Number
+    # . Mobile Number
     phone_number = models.CharField(max_length=20, unique=True)
+
+    state = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
     
-    # 4. Role aur Status 
+    # . Role aur Status 
     role = models.CharField(
         max_length=50,
         choices=Role.choices,
@@ -79,9 +82,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         default=Status.PENDING
     )
     
-    # 5. Wishlist 
+    # . Wishlist 
     wishlist = models.ManyToManyField(
-        Property, 
+        'properties.Property', 
         blank=True, # Wishlist khaali ho sakti hai
         related_name="wishlisted_by"
     )

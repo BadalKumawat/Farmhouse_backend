@@ -20,4 +20,7 @@ urlpatterns = [
 
     path('admin-dashboard-stats/', views.AdminDashboardStatsView.as_view(), name='admin-dashboard-stats'),
 
+    # path('create-order/', views.RazorpayOrderCreateView.as_view(), name='razorpay-create-order'),
+    # path('verify-payment/', views.RazorpayVerifyPaymentView.as_view(), name='razorpay-verify-payment'),
+
 ]

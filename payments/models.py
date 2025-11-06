@@ -16,6 +16,12 @@ class Payment(models.Model):
         related_name='payment'
     )
 
+    '''
+        razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
+        razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
+        razorpay_signature = models.CharField(max_length=255, null=True, blank=True)
+    '''
+
     # Transaction ID (e.g., "txn_1" or Stripe ID)
     transaction_id = models.CharField(max_length=100, unique=True, default=uuid.uuid4)
     amount = models.DecimalField(max_digits=10, decimal_places=2)

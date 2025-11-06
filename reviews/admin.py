@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Review, ContactMessage
+from .models import *
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ('id', 'property', 'user', 'rating', 'created_at')
     list_filter = ('rating', 'created_at')
@@ -22,3 +22,18 @@ class ContactMessageAdmin(admin.ModelAdmin):
     def mark_as_read(self, request, queryset):
         queryset.update(is_read=True)
     mark_as_read.short_description = "Mark selected messages as read"
+
+
+@admin.register(VideoTestimonial)
+class VideoTestimonialAdmin(admin.ModelAdmin):
+    list_display = ('user', 'property', 'rating', 'is_approved', 'created_at')
+    list_filter = ('is_approved', 'rating')
+    search_fields = ('user__email', 'property__title')
+    readonly_fields = ('user', 'property', 'created_at')
+    
+    # Action to manually approve testimonials
+    actions = ['approve_testimonials']
+
+    def approve_testimonials(self, request, queryset):
+        queryset.update(is_approved=True)
+    approve_testimonials.short_description = "Approve selected testimonials"

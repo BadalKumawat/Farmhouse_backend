@@ -69,3 +69,33 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"Message from {self.full_name} ({self.subject})"
+
+
+class VideoTestimonial(models.Model):
+    # UUID as primary key
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # User ko property se link karein (Guest)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='video_testimonials',
+        limit_choices_to={'role': 'guest'}
+    )
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name='video_testimonials'
+    )
+    
+    # Fields (Image: image_b34134.jpg ke hisab se)
+    video_file = models.FileField(upload_to='testimonials/videos/')
+    rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    #comment = models.TextField(blank=True, null=True)
+    
+    # Status for Admin Approval
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Video Testimonial by {self.user.email} for {self.property.title}"

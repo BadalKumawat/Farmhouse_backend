@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,6 +16,7 @@ from users.models import CustomUser
 from properties.models import Property
 from dateutil.relativedelta import relativedelta
 from .serializers import AdminDashboardStatsSerializer
+import razorpay
 
 
 # --- Guest API ---
@@ -39,13 +41,6 @@ class AdminPaymentListView(generics.ListAPIView):
     serializer_class = AdminPaymentListSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
-# --- Vendor Revenue API ---
-# payments/apis.py
-
-# ... (baaki imports) ...
-from django.db.models import Sum
-
-# ... (MyPaymentListView ke neeche) ...
 
 class VendorRevenueView(APIView):
     """
@@ -127,6 +122,97 @@ class AdminRevenueReportView(APIView):
         serializer = RevenueReportSerializer(instance=data)
         return Response(serializer.data)
 
+
+'''client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+#  View to Create Razorpay Order
+class RazorpayOrderCreateView(APIView):
+    """
+    API to create a Razorpay Order ID for a given Booking ID.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        booking_id = request.data.get('booking_id')
+
+        try:
+            booking = Booking.objects.get(id=booking_id, user=request.user)
+            if booking.payment_method == 'cash':
+                return Response({'error': 'Payment method is Cash, no online payment needed.'}, status=status.HTTP_400_BAD_REQUEST)
+            if booking.payment.status != 'pending':
+                 return Response({'error': 'Payment already processed.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Booking.DoesNotExist:
+            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Amount ko paise mein badlein (₹100 = 10000 paise)
+        amount_paise = int(booking.total_price * 100) 
+
+        try:
+            order = client.order.create({
+                'amount': amount_paise,
+                'currency': 'INR',
+                'receipt': booking.payment.transaction_id,
+                'payment_capture': '1'
+            })
+            
+            # Payment object ko update karein
+            booking.payment.razorpay_order_id = order['id']
+            booking.payment.save()
+
+            serializer = RazorpayOrderSerializer({
+                'booking_id': booking.id,
+                'order_id': order['id'],
+                'amount': booking.total_price,
+                'key_id': settings.RAZORPAY_KEY_ID
+            })
+            return Response(serializer.data)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# --- View to Verify Payment ---
+class RazorpayVerifyPaymentView(APIView):
+    """
+    API to verify payment signature and update Booking/Payment status.
+    """
+    permission_classes = [permissions.AllowAny] # Razorpay webhook ya Frontend se call
+
+    def post(self, request):
+        serializer = RazorpayVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Verify the signature (Razorpay ki library se)
+        try:
+            params_dict = {
+                'razorpay_order_id': serializer.validated_data['razorpay_order_id'],
+                'razorpay_payment_id': serializer.validated_data['razorpay_payment_id'],
+                'razorpay_signature': serializer.validated_data['razorpay_signature']
+            }
+            client.utility.verify_payment_signature(params_dict)
+
+        except Exception:
+            return Response({'message': 'Signature verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Payment aur Booking status update karein
+        try:
+            payment = Payment.objects.get(razorpay_order_id=serializer.validated_data['razorpay_order_id'])
+            payment.razorpay_payment_id = serializer.validated_data['razorpay_payment_id']
+            payment.razorpay_signature = serializer.validated_data['razorpay_signature']
+            payment.status = Payment.PaymentStatus.COMPLETED
+            payment.save()
+
+            # Booking status ko CONFIRMED karein
+            payment.booking.status = Booking.BookingStatus.CONFIRMED
+            payment.booking.save()
+            
+            # Yahaan aap Guest aur Vendor ko confirmation email bhej sakte hain
+
+            return Response({'message': 'Payment confirmed and booking is active.'}, status=status.HTTP_200_OK)
+
+        except Payment.DoesNotExist:
+            return Response({'error': 'Payment record not found.'}, status=status.HTTP_404_NOT_FOUND)
+            '''
 
 class AdminDashboardStatsView(APIView):
     """
